@@ -66,6 +66,7 @@
   }
 
   * { box-sizing: border-box; }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
   body {
     margin: 0;
     background: var(--ground);
@@ -91,9 +92,48 @@
   }
   .freshness .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-faint); flex: none; }
   .freshness.live .dot { background: var(--work); }
-  .summary { color: var(--ink-soft); margin: 0 0 4px; }
-  .summary strong { color: var(--ink); font-weight: 600; }
-  .summary .alert { color: var(--need); font-weight: 600; }
+  .kpis {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px; margin: 18px 0 6px;
+  }
+  .tile {
+    position: relative; display: flex; flex-direction: column; gap: 2px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 16px 12px; box-shadow: var(--shadow);
+    text-decoration: none; color: var(--ink); overflow: hidden;
+  }
+  .tile::before {
+    content: ""; position: absolute; inset: 0 auto 0 0; width: 4px;
+  }
+  .tile.t-need::before { background: var(--need); }
+  .tile.t-work::before { background: var(--work); }
+  .tile.t-review::before { background: var(--review); }
+  .tile.t-chart::before { background: var(--accent); }
+  a.tile:hover { border-color: var(--ink-faint); }
+  .tile-label {
+    font-family: "Archivo", "Public Sans", sans-serif;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .tile-num {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 34px; font-weight: 500; line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .tile.t-need .tile-num.hot { color: var(--need); }
+  .tile-sub { font-size: 12px; color: var(--ink-faint); min-height: 1.2em; }
+  .spark {
+    display: flex; align-items: flex-end; gap: 3px;
+    height: 44px; margin-top: 8px;
+    border-bottom: 1px solid var(--line); padding-bottom: 1px;
+  }
+  .spark .bar {
+    flex: 1; min-width: 4px; border-radius: 3px 3px 0 0;
+    background: var(--accent); opacity: 0.45; min-height: 2px;
+  }
+  .spark .bar.today { opacity: 1; }
+  .spark .bar.zero { background: var(--line); opacity: 1; }
+  .spark .bar:hover { opacity: 1; }
   #notice { margin: 12px 0 0; display: grid; gap: 8px; }
   .banner {
     border: 1px solid var(--line); border-left: 3px solid var(--warn);
@@ -123,9 +163,15 @@
   .card {
     background: var(--surface); border: 1px solid var(--line);
     border-left-width: 3px; border-radius: 10px;
-    padding: 12px 16px; box-shadow: var(--shadow);
+    padding: 13px 18px; box-shadow: var(--shadow);
     display: grid; gap: 6px;
   }
+  .card:hover { border-color: var(--ink-faint); border-left-color: inherit; }
+  .card.s-needs_input:hover { border-left-color: var(--need); }
+  .card.s-working:hover { border-left-color: var(--work); }
+  .card.s-review_ready:hover { border-left-color: var(--review); }
+  .card.s-done:hover { border-left-color: var(--line); }
+  .title { font-size: 15.5px; }
   .card.s-needs_input { border-left-color: var(--need); }
   .card.s-working { border-left-color: var(--work); }
   .card.s-review_ready { border-left-color: var(--review); }
@@ -196,7 +242,27 @@
     <h1>Claude Central</h1>
     <span class="freshness" id="freshness"><span class="dot"></span><span id="freshness-text">loading…</span></span>
   </header>
-  <p class="summary" id="summary"></p>
+  <div class="kpis">
+    <a class="tile t-need" href="#g-needs_input">
+      <span class="tile-label">Needs your input</span>
+      <span class="tile-num" id="k-need">–</span>
+      <span class="tile-sub" id="k-need-sub"></span>
+    </a>
+    <a class="tile t-work" href="#g-working">
+      <span class="tile-label">Working now</span>
+      <span class="tile-num" id="k-work">–</span>
+      <span class="tile-sub" id="k-work-sub"></span>
+    </a>
+    <a class="tile t-review" href="#g-review_ready">
+      <span class="tile-label">Review ready</span>
+      <span class="tile-num" id="k-review">–</span>
+      <span class="tile-sub" id="k-review-sub"></span>
+    </a>
+    <div class="tile t-chart">
+      <span class="tile-label">Sessions touched · 14 days</span>
+      <div class="spark" id="spark" role="img" aria-label="Sessions touched per day, last 14 days"></div>
+    </div>
+  </div>
   <div id="notice"></div>
 
   <section class="group" id="g-needs_input">
@@ -443,10 +509,19 @@
     toggle.textContent = (showArchived ? "Hide" : "Show") + " archived (" + doneArchived.length + ")";
 
     var n = byGroup.needs_input.length, w = byGroup.working.length, r = byGroup.review_ready.length;
-    document.getElementById("summary").innerHTML =
-      (n ? '<span class="alert">' + n + " session" + (n === 1 ? "" : "s") + " need" + (n === 1 ? "s" : "") + " you</span>"
-         : "<strong>Nothing needs you</strong>") +
-      " · " + w + " working · " + r + " review ready";
+    var kNeed = document.getElementById("k-need");
+    kNeed.textContent = n;
+    kNeed.classList.toggle("hot", n > 0);
+    document.getElementById("k-need-sub").textContent = n === 0 ? "all clear" :
+      "oldest waiting " + relTime(Math.min.apply(null, byGroup.needs_input.map(function (s) { return s.updatedAt; })));
+    document.getElementById("k-work").textContent = w;
+    document.getElementById("k-work-sub").textContent = w === 0 ? "all quiet" :
+      "last activity " + relTime(Math.max.apply(null, byGroup.working.map(function (s) { return s.updatedAt; })));
+    document.getElementById("k-review").textContent = r;
+    var unreadReview = byGroup.review_ready.filter(function (s) { return s.unread; }).length;
+    document.getElementById("k-review-sub").textContent =
+      r === 0 ? "nothing pending" : unreadReview ? unreadReview + " unread" : "in the last 30 days";
+    renderSpark();
 
     var f = document.getElementById("freshness");
     f.classList.toggle("live", freshness.mode === "live");
@@ -454,6 +529,26 @@
       freshness.mode === "live"
         ? "live · updated " + relTime(freshness.ts)
         : "snapshot · " + (freshness.ts ? new Date(freshness.ts).toLocaleString() : "unknown");
+  }
+
+  function renderSpark() {
+    var DAY = 24 * 3600 * 1000;
+    var todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    var days = [];
+    for (var i = 13; i >= 0; i--) days.push(todayStart.getTime() - i * DAY);
+    var counts = days.map(function (d0) {
+      return lastSessions.filter(function (s) { return s.updatedAt >= d0 && s.updatedAt < d0 + DAY; }).length;
+    });
+    var max = Math.max.apply(null, counts.concat([1]));
+    document.getElementById("spark").innerHTML = days.map(function (d0, i) {
+      var c = counts[i];
+      var h = c === 0 ? 2 : Math.max(4, Math.round((c / max) * 42));
+      var label = new Date(d0).toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+        " · " + c + " session" + (c === 1 ? "" : "s");
+      return '<div class="bar' + (i === 13 ? " today" : "") + (c === 0 ? " zero" : "") +
+        '" style="height:' + h + 'px" title="' + esc(label) + '"></div>';
+    }).join("");
   }
 
   document.getElementById("archived-toggle").addEventListener("click", function () {
