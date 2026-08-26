@@ -15,7 +15,7 @@ Cowork sessions — grouped by what matters:
 Remote `list_sessions` API. Regular claude.ai chat conversations have no
 session API and are not shown.
 
-**Dashboard URL:** _recorded after first publish — see below_
+**Dashboard URL:** https://claude.ai/code/artifact/82f09032-2515-47da-81db-73c50cbcca84
 
 ## How it works
 
@@ -43,11 +43,16 @@ session API and are not shown.
 
 First match wins:
 
+0. `session_status` ARCHIVED → **History** (an archived session can't be waiting on you)
 1. `post_turn_summary.status_category == "need_input"` → **Needs your input**
    (overrides everything — a session can be bucketed "working" yet blocked on you)
 2. `status_bucket` WORKING or `session_status` RUNNING → **Working**
 3. `status_bucket` REVIEW_READY or category `review_ready` → **Review ready**
 4. everything else (idle / completed / archived) → **History**
+
+Needs-input and working sessions always show regardless of age; review-ready
+and history are windowed to the last 30 days so stale sessions don't swamp
+the page.
 
 Cowork sessions are detected client-side by their `cowork-*` / `product:cowork`
 tags (the server-side tags filter is not available to all callers). Session

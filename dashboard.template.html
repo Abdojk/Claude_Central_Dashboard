@@ -282,6 +282,7 @@
     var cat = sum && sum.status_category;
     var bucket = raw.status_bucket || "";
     var status = raw.session_status || "";
+    if (has(status, "ARCHIVED")) return "done"; // an archived session can't be waiting on you
     if (cat === "need_input" || has(bucket, "NEED_INPUT")) return "needs_input";
     if (has(bucket, "WORKING") || has(status, "RUNNING")) return "working";
     if (has(bucket, "REVIEW_READY") || cat === "review_ready") return "review_ready";
@@ -409,6 +410,9 @@
     GROUPS.forEach(function (g) { byGroup[g].sort(sortSessions); });
 
     var cutoff = Date.now() - DONE_WINDOW_MS;
+    // Needs-input and working always show; review-ready and history are
+    // windowed to 30 days so months-old stale sessions don't swamp the page.
+    byGroup.review_ready = byGroup.review_ready.filter(function (s) { return s.updatedAt >= cutoff; });
     var doneRecent = byGroup.done.filter(function (s) { return s.updatedAt >= cutoff; });
     var doneActive = doneRecent.filter(function (s) { return !s.archived; });
     var doneArchived = doneRecent.filter(function (s) { return s.archived; });
@@ -610,6 +614,7 @@
       [{ status_bucket: "SESSION_STATUS_BUCKET_REVIEW_READY" }, "review_ready"],
       [{ external_metadata: { post_turn_summary: { status_category: "review_ready" } }, session_status: "SESSION_STATUS_IDLE" }, "review_ready"],
       [{ session_status: "SESSION_STATUS_ARCHIVED", status_bucket: "SESSION_STATUS_BUCKET_COMPLETED" }, "done"],
+      [{ session_status: "SESSION_STATUS_ARCHIVED", post_turn_summary: { status_category: "need_input" } }, "done"],
       [{ session_status: "SESSION_STATUS_IDLE" }, "done"]
     ];
     var failures = fixtures.filter(function (f) { return classify(f[0]) !== f[1]; });

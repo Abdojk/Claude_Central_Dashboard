@@ -29,12 +29,10 @@ Refresh the Claude Central dashboard artifact. Steps, in order:
    only if the list_sessions calls themselves succeeded.
 5. Publish <scratchpad>/index.html with the Artifact tool as an UPDATE to the
    existing artifact at this URL (do not create a new artifact):
-   <ARTIFACT_URL>
+   https://claude.ai/code/artifact/82f09032-2515-47da-81db-73c50cbcca84
    Use favicon "📡" and capabilities:
    {"mcp": {"servers": [{"server": "Claude Code Remote", "tools": ["list_sessions"]}]}}
 6. Do not commit or push anything, do not create other artifacts, files
    outside the scratchpad, or triggers. Do not send notifications.
 ```
 
-Replace `<ARTIFACT_URL>` with the dashboard's published artifact URL (recorded
-in README.md) before creating the trigger.
