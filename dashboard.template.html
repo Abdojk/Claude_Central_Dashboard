@@ -1,0 +1,623 @@
+<title>Claude Central</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #f6f7f9;
+    --surface: #ffffff;
+    --surface-2: #eef1f4;
+    --ink: #1b2430;
+    --ink-soft: #5c6b7a;
+    --ink-faint: #8a97a5;
+    --line: #dde3e9;
+    --accent: #16697a;
+    --accent-ink: #ffffff;
+    --need: #c2453a;
+    --need-soft: #fbeeed;
+    --work: #1f8a4c;
+    --work-soft: #eaf5ee;
+    --review: #a06f14;
+    --review-soft: #f8f1e2;
+    --done: #7d8894;
+    --warn: #a06f14;
+    --shadow: 0 1px 2px rgba(27, 36, 48, 0.06), 0 4px 14px rgba(27, 36, 48, 0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #10151c;
+      --surface: #18202a;
+      --surface-2: #1f2935;
+      --ink: #e8edf2;
+      --ink-soft: #9daebd;
+      --ink-faint: #6b7b8a;
+      --line: #2a3642;
+      --accent: #58b7c8;
+      --accent-ink: #0d1319;
+      --need: #ff6b5e;
+      --need-soft: #33201f;
+      --work: #4cc57e;
+      --work-soft: #17281e;
+      --review: #e0b34e;
+      --review-soft: #2d2617;
+      --done: #6b7b8a;
+      --warn: #e0b34e;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #10151c;
+    --surface: #18202a;
+    --surface-2: #1f2935;
+    --ink: #e8edf2;
+    --ink-soft: #9daebd;
+    --ink-faint: #6b7b8a;
+    --line: #2a3642;
+    --accent: #58b7c8;
+    --accent-ink: #0d1319;
+    --need: #ff6b5e;
+    --need-soft: #33201f;
+    --work: #4cc57e;
+    --work-soft: #17281e;
+    --review: #e0b34e;
+    --review-soft: #2d2617;
+    --done: #6b7b8a;
+    --warn: #e0b34e;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.3);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Public Sans", "Segoe UI", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 32px 20px 72px; }
+
+  header.masthead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 16px; margin-bottom: 6px; }
+  h1 {
+    font-family: "Archivo", "Public Sans", sans-serif;
+    font-size: 26px; font-weight: 700; letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .freshness {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px; color: var(--ink-soft);
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 3px 10px; background: var(--surface);
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .freshness .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-faint); flex: none; }
+  .freshness.live .dot { background: var(--work); }
+  .summary { color: var(--ink-soft); margin: 0 0 4px; }
+  .summary strong { color: var(--ink); font-weight: 600; }
+  .summary .alert { color: var(--need); font-weight: 600; }
+  #notice { margin: 12px 0 0; display: grid; gap: 8px; }
+  .banner {
+    border: 1px solid var(--line); border-left: 3px solid var(--warn);
+    background: var(--surface); border-radius: 8px;
+    padding: 9px 13px; font-size: 13.5px; color: var(--ink-soft);
+  }
+
+  section.group { margin-top: 30px; }
+  .group-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .group-head h2 {
+    font-family: "Archivo", "Public Sans", sans-serif;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
+    margin: 0; color: var(--ink-soft);
+  }
+  .group-head .count {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px; padding: 1px 8px; border-radius: 999px;
+    background: var(--surface-2); color: var(--ink-soft);
+  }
+  #g-needs_input .group-head h2 { color: var(--need); }
+  #g-needs_input .group-head .count { background: var(--need); color: #fff; }
+  #g-needs_input .group-head .count.zero { background: var(--surface-2); color: var(--ink-soft); }
+  #g-working .group-head h2 { color: var(--work); }
+  #g-review_ready .group-head h2 { color: var(--review); }
+
+  .rows { display: grid; gap: 10px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-left-width: 3px; border-radius: 10px;
+    padding: 12px 16px; box-shadow: var(--shadow);
+    display: grid; gap: 6px;
+  }
+  .card.s-needs_input { border-left-color: var(--need); }
+  .card.s-working { border-left-color: var(--work); }
+  .card.s-review_ready { border-left-color: var(--review); }
+  .card.s-done { border-left-color: var(--line); }
+
+  .row-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .title { font-weight: 600; color: var(--ink); text-decoration: none; }
+  a.title:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .unread { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--work); flex: none; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .pulse { animation: pulse 2s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+
+  .chip {
+    font-size: 11.5px; font-weight: 500; letter-spacing: 0.03em;
+    padding: 1px 8px; border-radius: 999px;
+    background: var(--surface-2); color: var(--ink-soft);
+    border: 1px solid var(--line);
+  }
+  .chip.surface-badge { background: var(--surface-2); }
+  .chip.cowork { border-color: var(--accent); color: var(--accent); background: transparent; }
+  .chip.warnchip { border-color: var(--warn); color: var(--warn); background: transparent; }
+  .chip.archived { border-style: dashed; }
+
+  .ask {
+    background: var(--need-soft); border-radius: 7px;
+    padding: 8px 12px; font-size: 14px; color: var(--ink);
+  }
+  .ask::before { content: "Waiting on you: "; font-weight: 600; color: var(--need); }
+  .detail { font-size: 13.5px; color: var(--ink-soft); }
+
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 5px 14px; align-items: baseline;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px; color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .meta .when { margin-left: auto; color: var(--ink-soft); }
+
+  .empty { color: var(--ink-faint); font-size: 14px; padding: 4px 2px; }
+  #g-needs_input .empty { color: var(--work); }
+
+  details.done-wrap > summary {
+    cursor: pointer; list-style: none;
+    display: flex; align-items: center; gap: 10px;
+  }
+  details.done-wrap > summary::-webkit-details-marker { display: none; }
+  details.done-wrap > summary::after {
+    content: "▸"; color: var(--ink-faint); font-size: 12px; transition: transform 0.15s;
+  }
+  details.done-wrap[open] > summary::after { transform: rotate(90deg); }
+  details.done-wrap .rows { margin-top: 10px; }
+  .archived-toggle {
+    margin-top: 10px; background: none; border: 1px solid var(--line);
+    border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 12.5px;
+    color: var(--ink-soft); cursor: pointer;
+  }
+  .archived-toggle:hover { background: var(--surface-2); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px;
+  }
+  footer.pagefoot { margin-top: 40px; font-size: 12.5px; color: var(--ink-faint); }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <h1>Claude Central</h1>
+    <span class="freshness" id="freshness"><span class="dot"></span><span id="freshness-text">loading…</span></span>
+  </header>
+  <p class="summary" id="summary"></p>
+  <div id="notice"></div>
+
+  <section class="group" id="g-needs_input">
+    <div class="group-head"><h2>Needs your input</h2><span class="count" data-count></span></div>
+    <div class="rows" data-rows></div>
+  </section>
+
+  <section class="group" id="g-working">
+    <div class="group-head"><h2>Working now</h2><span class="count" data-count></span></div>
+    <div class="rows" data-rows></div>
+  </section>
+
+  <section class="group" id="g-review_ready">
+    <div class="group-head"><h2>Review ready</h2><span class="count" data-count></span></div>
+    <div class="rows" data-rows></div>
+  </section>
+
+  <section class="group" id="g-done">
+    <details class="done-wrap">
+      <summary><div class="group-head" style="margin-bottom:0"><h2>Recent history · 30 days</h2><span class="count" data-count></span></div></summary>
+      <div class="rows" data-rows></div>
+      <button class="archived-toggle" id="archived-toggle" hidden></button>
+    </details>
+  </section>
+
+  <footer class="pagefoot" id="pagefoot">
+    Covers Claude Code (claude.ai · Desktop · CLI) and Cowork sessions. Regular claude.ai chats have no session API and are not shown.
+  </footer>
+</div>
+
+<script type="application/json" id="snapshot">
+/*SNAPSHOT_START*/{"generatedAt":"1970-01-01T00:00:00Z","sessions":[]}/*SNAPSHOT_END*/
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  var SERVER = "Claude Code Remote";
+  var TOOL = "list_sessions";
+  var DONE_WINDOW_MS = 30 * 24 * 3600 * 1000;
+  var GROUPS = ["needs_input", "working", "review_ready", "done"];
+
+  // ---------- data extraction / normalization ----------
+
+  function extractSessions(payload) {
+    if (payload == null) return [];
+    if (typeof payload === "string") {
+      try { payload = JSON.parse(payload); } catch (e) { return []; }
+    }
+    if (Array.isArray(payload)) {
+      // Either an array of raw sessions or an array of page envelopes.
+      var out = [];
+      payload.forEach(function (item) {
+        if (item && (item.ccr || item.data)) out = out.concat(extractSessions(item));
+        else if (item) out.push(item);
+      });
+      return out;
+    }
+    if (payload.ccr && Array.isArray(payload.ccr.data)) return payload.ccr.data;
+    if (Array.isArray(payload.data)) return payload.data;
+    return [];
+  }
+
+  function pageInfo(payload) {
+    if (typeof payload === "string") {
+      try { payload = JSON.parse(payload); } catch (e) { return {}; }
+    }
+    var env = payload && payload.ccr ? payload.ccr : payload;
+    if (!env || typeof env !== "object" || Array.isArray(env)) return {};
+    return { hasMore: !!env.has_more, lastId: env.last_id };
+  }
+
+  function has(x, suffix) { return typeof x === "string" && x.indexOf(suffix, x.length - suffix.length) !== -1; }
+
+  function summaryOf(raw) {
+    return raw.post_turn_summary ||
+      (raw.external_metadata && raw.external_metadata.post_turn_summary) || null;
+  }
+
+  function classify(raw) {
+    var sum = summaryOf(raw);
+    var cat = sum && sum.status_category;
+    var bucket = raw.status_bucket || "";
+    var status = raw.session_status || "";
+    if (cat === "need_input" || has(bucket, "NEED_INPUT")) return "needs_input";
+    if (has(bucket, "WORKING") || has(status, "RUNNING")) return "working";
+    if (has(bucket, "REVIEW_READY") || cat === "review_ready") return "review_ready";
+    return "done";
+  }
+
+  function surfaceOf(raw) {
+    var tags = raw.tags || [];
+    for (var i = 0; i < tags.length; i++) {
+      var t = String(tags[i]);
+      if (t.indexOf("cowork") !== -1) return "Cowork";
+    }
+    switch (raw.origin) {
+      case "web_claude_ai": return "claude.ai";
+      case "desktop_app": return "Desktop";
+      case "claude_code_cli": return "CLI";
+      default: return raw.origin || "Other";
+    }
+  }
+
+  function repoShort(raw) {
+    try {
+      var url = raw.session_context.sources[0].git_repository.url;
+      var parts = url.replace(/\.git$/, "").split("/");
+      return parts.slice(-2).join("/");
+    } catch (e) { return null; }
+  }
+
+  function modelShort(raw) {
+    var m = (raw.session_context && raw.session_context.model) || raw.configured_model || "";
+    return m.replace(/^claude-/, "");
+  }
+
+  function normalizeSession(raw) {
+    var sum = summaryOf(raw) || {};
+    return {
+      id: raw.id || "",
+      title: raw.title || (raw.id ? raw.id.slice(0, 18) + "…" : "Untitled session"),
+      group: classify(raw),
+      needsAction: sum.needs_action || "",
+      statusDetail: sum.status_detail || "",
+      surface: surfaceOf(raw),
+      unread: !!raw.unread,
+      archived: has(raw.session_status || "", "ARCHIVED"),
+      localMachine: raw.environment_kind === "bridge",
+      disconnectedWhileRunning:
+        has(raw.session_status || "", "RUNNING") && raw.connection_status === "disconnected",
+      updatedAt: Date.parse(raw.updated_at || "") || 0,
+      model: modelShort(raw),
+      repo: repoShort(raw),
+      costUsd: raw.external_metadata && raw.external_metadata.usage
+        ? raw.external_metadata.usage.cost_usd : null,
+      link: raw.id ? "https://claude.ai/code/" + raw.id : null
+    };
+  }
+
+  function sortSessions(a, b) {
+    if (a.unread !== b.unread) return a.unread ? -1 : 1;
+    return b.updatedAt - a.updatedAt;
+  }
+
+  // ---------- rendering ----------
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function relTime(ts) {
+    if (!ts) return "";
+    var d = Date.now() - ts;
+    if (d < 0) d = 0;
+    var m = Math.round(d / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return m + "m ago";
+    var h = Math.round(m / 60);
+    if (h < 24) return h + "h ago";
+    var days = Math.round(h / 24);
+    if (days === 1) return "yesterday";
+    if (days < 30) return days + "d ago";
+    return new Date(ts).toLocaleDateString();
+  }
+
+  function chipHtml(s) {
+    var chips = "";
+    chips += '<span class="chip surface-badge' + (s.surface === "Cowork" ? " cowork" : "") + '">' + esc(s.surface) + "</span>";
+    if (s.localMachine) chips += '<span class="chip">local machine</span>';
+    if (s.disconnectedWhileRunning) chips += '<span class="chip warnchip">disconnected</span>';
+    if (s.archived) chips += '<span class="chip archived">archived</span>';
+    return chips;
+  }
+
+  function cardHtml(s) {
+    var h = '<article class="card s-' + s.group + '">';
+    h += '<div class="row-top">';
+    if (s.group === "working") h += '<span class="pulse" title="actively working"></span>';
+    if (s.unread) h += '<span class="unread" title="unread"></span>';
+    h += s.link
+      ? '<a class="title" href="' + esc(s.link) + '" target="_blank" rel="noopener">' + esc(s.title) + "</a>"
+      : '<span class="title">' + esc(s.title) + "</span>";
+    h += chipHtml(s);
+    h += "</div>";
+    if (s.group === "needs_input" && s.needsAction) {
+      h += '<div class="ask">' + esc(s.needsAction) + "</div>";
+    } else if (s.statusDetail) {
+      h += '<div class="detail">' + esc(s.statusDetail) + "</div>";
+    }
+    h += '<div class="meta">';
+    if (s.repo) h += "<span>" + esc(s.repo) + "</span>";
+    if (s.model) h += "<span>" + esc(s.model) + "</span>";
+    if (typeof s.costUsd === "number") h += "<span>$" + s.costUsd.toFixed(2) + "</span>";
+    h += '<span class="when">' + esc(relTime(s.updatedAt)) + "</span>";
+    h += "</div></article>";
+    return h;
+  }
+
+  var showArchived = false;
+  var lastSessions = [];
+  var freshness = { mode: "snapshot", ts: 0 };
+
+  function render() {
+    var byGroup = { needs_input: [], working: [], review_ready: [], done: [] };
+    lastSessions.forEach(function (s) { byGroup[s.group].push(s); });
+    GROUPS.forEach(function (g) { byGroup[g].sort(sortSessions); });
+
+    var cutoff = Date.now() - DONE_WINDOW_MS;
+    var doneRecent = byGroup.done.filter(function (s) { return s.updatedAt >= cutoff; });
+    var doneActive = doneRecent.filter(function (s) { return !s.archived; });
+    var doneArchived = doneRecent.filter(function (s) { return s.archived; });
+
+    var emptyText = {
+      needs_input: "Nothing waiting on you.",
+      working: "No sessions running right now.",
+      review_ready: "Nothing to review.",
+      done: "No finished sessions in the last 30 days."
+    };
+
+    GROUPS.forEach(function (g) {
+      var el = document.getElementById("g-" + g);
+      var list = g === "done"
+        ? (showArchived ? doneActive.concat(doneArchived) : doneActive)
+        : byGroup[g];
+      var countEl = el.querySelector("[data-count]");
+      var shownCount = g === "done" ? doneRecent.length : list.length;
+      countEl.textContent = shownCount;
+      countEl.classList.toggle("zero", shownCount === 0);
+      el.querySelector("[data-rows]").innerHTML = list.length
+        ? list.map(cardHtml).join("")
+        : '<div class="empty">' + emptyText[g] + "</div>";
+    });
+
+    var toggle = document.getElementById("archived-toggle");
+    toggle.hidden = doneArchived.length === 0;
+    toggle.textContent = (showArchived ? "Hide" : "Show") + " archived (" + doneArchived.length + ")";
+
+    var n = byGroup.needs_input.length, w = byGroup.working.length, r = byGroup.review_ready.length;
+    document.getElementById("summary").innerHTML =
+      (n ? '<span class="alert">' + n + " session" + (n === 1 ? "" : "s") + " need" + (n === 1 ? "s" : "") + " you</span>"
+         : "<strong>Nothing needs you</strong>") +
+      " · " + w + " working · " + r + " review ready";
+
+    var f = document.getElementById("freshness");
+    f.classList.toggle("live", freshness.mode === "live");
+    document.getElementById("freshness-text").textContent =
+      freshness.mode === "live"
+        ? "live · updated " + relTime(freshness.ts)
+        : "snapshot · " + (freshness.ts ? new Date(freshness.ts).toLocaleString() : "unknown");
+  }
+
+  document.getElementById("archived-toggle").addEventListener("click", function () {
+    showArchived = !showArchived;
+    render();
+  });
+
+  function setData(rawSessions, mode, ts) {
+    var byId = new Map();
+    rawSessions.forEach(function (raw) { if (raw && raw.id) byId.set(raw.id, raw); });
+    lastSessions = Array.from(byId.values()).map(normalizeSession);
+    freshness = { mode: mode, ts: ts };
+    render();
+  }
+
+  // ---------- notices ----------
+
+  function setNotice(key, text) {
+    var id = "notice-" + key;
+    var el = document.getElementById(id);
+    if (!text) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement("div");
+      el.id = id;
+      el.className = "banner";
+      document.getElementById("notice").appendChild(el);
+    }
+    el.textContent = text;
+  }
+
+  // ---------- snapshot boot ----------
+
+  var snapshotData = { generatedAt: 0, sessions: [] };
+  (function bootSnapshot() {
+    try {
+      var text = document.getElementById("snapshot").textContent;
+      var m = text.match(/\/\*SNAPSHOT_START\*\/([\s\S]*)\/\*SNAPSHOT_END\*\//);
+      var parsed = JSON.parse(m[1]);
+      snapshotData = {
+        generatedAt: Date.parse(parsed.generatedAt || "") || 0,
+        sessions: extractSessions(parsed.sessions)
+      };
+    } catch (e) { /* keep empty snapshot */ }
+    setData(snapshotData.sessions, "snapshot", snapshotData.generatedAt);
+  })();
+
+  setInterval(render, 60000); // keep relative timestamps honest
+
+  // ---------- live mode ----------
+
+  var SETTINGS_FIX = " in claude.ai Settings → Connectors to see live data. Showing the last snapshot.";
+
+  function fallbackToSnapshot() {
+    setData(snapshotData.sessions, "snapshot", snapshotData.generatedAt);
+  }
+
+  function startLive(mcp) {
+    var epoch = 0;
+
+    function handleError(err) {
+      var code = err && err.code;
+      switch (code) {
+        case "server_unavailable":
+        case "rate_limited":
+          setNotice("live", "Live connection hiccup — retrying automatically.");
+          return; // keep last-good data; watchTool refreshes on its own
+        case "needs_reauth":
+          fallbackToSnapshot();
+          setNotice("live", "Reconnect “" + SERVER + "”" + SETTINGS_FIX);
+          return;
+        case "server_not_connected":
+        case "selection_required":
+        case "server_not_found":
+          fallbackToSnapshot();
+          setNotice("live", "Add “" + SERVER + "”" + SETTINGS_FIX);
+          return;
+        case "blocked_by_policy":
+        case "approval_required":
+          fallbackToSnapshot();
+          setNotice("live", "Live data is blocked by org policy. Showing the last snapshot.");
+          return;
+        case "tool_error":
+          setNotice("live", "Live refresh failed: " + (err.message || "tool error") + ". Showing last data.");
+          return;
+        case "not_granted":
+        case "capability_disabled":
+        case "capability_removed":
+        case "bad_request":
+          return; // no live updates will ever arrive; snapshot mode is already rendered
+        default:
+          setNotice("live", "Live refresh problem. Showing last data.");
+      }
+    }
+
+    function deliver(result, myEpoch) {
+      var payload = result.payload;
+      var sessions = extractSessions(payload);
+      var info = pageInfo(payload);
+      var storedAt = result.cache && result.cache.storedAt ? result.cache.storedAt : Date.now();
+
+      var followups = [];
+      // Deeper pages (up to 2 more).
+      var chain = Promise.resolve();
+      var lastId = info.lastId, more = info.hasMore, pages = 0;
+      function fetchNext() {
+        if (!more || !lastId || pages >= 2) return Promise.resolve();
+        pages++;
+        return mcp.callTool(SERVER, TOOL, { limit: 100, mine: true, after_id: lastId },
+          { cache: { staleTime: 30000 } })
+          .then(function (res) {
+            var extra = extractSessions(res.payload);
+            var pinfo = pageInfo(res.payload);
+            followups = followups.concat(extra);
+            lastId = pinfo.lastId; more = pinfo.hasMore;
+            return fetchNext();
+          })
+          .catch(function () { /* deeper pages are best-effort */ });
+      }
+      // Best-effort Cowork tag query (server-side filter may be unsupported).
+      var coworkFetch = mcp.callTool(SERVER, TOOL,
+        { limit: 100, mine: true, tags: ["cowork-local", "cowork-remote"] },
+        { cache: { staleTime: 30000 } })
+        .then(function (res) { followups = followups.concat(extractSessions(res.payload)); })
+        .catch(function () {
+          setNotice("cowork", null);
+        });
+
+      Promise.all([fetchNext(), coworkFetch]).then(function () {
+        if (myEpoch !== epoch) return; // a newer refresh already rendered
+        setNotice("live", null);
+        setData(sessions.concat(followups), "live", storedAt);
+      });
+    }
+
+    var unsub = null;
+    unsub = mcp.watchTool(SERVER, TOOL, { limit: 100, mine: true }, function (ev) {
+      if (ev.type === "error") { handleError(ev.error); return; }
+      epoch++;
+      deliver(ev.result, epoch);
+    }, { refetchInterval: 60000, cache: { staleTime: 30000, gcTime: 300000 } });
+  }
+
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("mcp").then(function (mcp) {
+      if (mcp) startLive(mcp);
+      // null → stay in snapshot mode silently; the hourly refresh keeps it current.
+    });
+  }
+
+  // ---------- self test (?selftest=1) ----------
+
+  if (/[?&]selftest=1/.test(location.search)) {
+    var fixtures = [
+      [{ post_turn_summary: { status_category: "need_input" }, status_bucket: "SESSION_STATUS_BUCKET_WORKING" }, "needs_input"],
+      [{ status_bucket: "SESSION_STATUS_BUCKET_WORKING" }, "working"],
+      [{ session_status: "SESSION_STATUS_RUNNING" }, "working"],
+      [{ status_bucket: "WORKING" }, "working"],
+      [{ status_bucket: "SESSION_STATUS_BUCKET_REVIEW_READY" }, "review_ready"],
+      [{ external_metadata: { post_turn_summary: { status_category: "review_ready" } }, session_status: "SESSION_STATUS_IDLE" }, "review_ready"],
+      [{ session_status: "SESSION_STATUS_ARCHIVED", status_bucket: "SESSION_STATUS_BUCKET_COMPLETED" }, "done"],
+      [{ session_status: "SESSION_STATUS_IDLE" }, "done"]
+    ];
+    var failures = fixtures.filter(function (f) { return classify(f[0]) !== f[1]; });
+    var surfOk = surfaceOf({ tags: ["cowork-local"], origin: "desktop_app" }) === "Cowork" &&
+      surfaceOf({ origin: "web_claude_ai" }) === "claude.ai";
+    setNotice("selftest", failures.length === 0 && surfOk
+      ? "Self-test passed (" + fixtures.length + " classify cases + surface rules)."
+      : "SELF-TEST FAILED: " + failures.length + " classify failures, surface ok=" + surfOk);
+  }
+})();
+</script>

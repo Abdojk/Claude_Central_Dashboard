@@ -1,0 +1,55 @@
+# Claude Central Dashboard
+
+A single dashboard page showing all of your Claude agentic sessions — Claude
+Code launched from claude.ai web, the desktop app, or the CLI, plus Claude
+Cowork sessions — grouped by what matters:
+
+1. **Needs your input** — sessions blocked on a question, shown with the exact
+   thing they are waiting on
+2. **Working now** — sessions actively running
+3. **Review ready** — finished work waiting for your review
+4. **Recent history** — completed/idle sessions from the last 30 days
+   (collapsed; archived sessions behind a further toggle)
+
+**Scope:** the dashboard covers *agentic* sessions returned by the Claude Code
+Remote `list_sessions` API. Regular claude.ai chat conversations have no
+session API and are not shown.
+
+**Dashboard URL:** _recorded after first publish — see below_
+
+## How it works
+
+- `dashboard.template.html` is the entire page (inline CSS + JS). It renders
+  from a snapshot embedded between `/*SNAPSHOT_START*/ … /*SNAPSHOT_END*/`
+  markers in the `<script type="application/json" id="snapshot">` block, then
+  tries to go **live**: if the viewer grants the page the `mcp` capability for
+  the "Claude Code Remote" connector, it watches `list_sessions` (refreshing
+  about every 60 s while open) and flips the freshness chip to "live". If live
+  data is unavailable for any reason, the page stays on the snapshot with an
+  honest "snapshot · <timestamp>" chip.
+- `generate.mjs` injects a fresh snapshot into the template
+  (`node generate.mjs snapshot.json --out index.html`). It exits non-zero on
+  any problem so automation never publishes a broken page.
+- `snapshot.sample.json` is invented fixture data covering every status branch
+  (needs-input override, running, review-ready, idle, archived, Cowork tags,
+  disconnected-while-running, out-of-window). Use it for local testing:
+  `node generate.mjs snapshot.sample.json --out /tmp/index.html`. Append
+  `?selftest=1` when opening the page to run the built-in classification
+  self-test.
+- `ROUTINE.md` holds the verbatim prompt of the hourly refresh Routine that
+  regenerates the snapshot and republishes the artifact at the same URL.
+
+## Status classification
+
+First match wins:
+
+1. `post_turn_summary.status_category == "need_input"` → **Needs your input**
+   (overrides everything — a session can be bucketed "working" yet blocked on you)
+2. `status_bucket` WORKING or `session_status` RUNNING → **Working**
+3. `status_bucket` REVIEW_READY or category `review_ready` → **Review ready**
+4. everything else (idle / completed / archived) → **History**
+
+Cowork sessions are detected client-side by their `cowork-*` / `product:cowork`
+tags (the server-side tags filter is not available to all callers). Session
+links use `https://claude.ai/code/<session_id>` — best effort; Cowork-tagged
+sessions may open in a different surface.
