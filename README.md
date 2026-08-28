@@ -21,12 +21,13 @@ session API and are not shown.
 
 - `dashboard.template.html` is the entire page (inline CSS + JS). It renders
   from a snapshot embedded between `/*SNAPSHOT_START*/ … /*SNAPSHOT_END*/`
-  markers in the `<script type="application/json" id="snapshot">` block, then
-  tries to go **live**: if the viewer grants the page the `mcp` capability for
-  the "Claude Code Remote" connector, it watches `list_sessions` (refreshing
-  about every 60 s while open) and flips the freshness chip to "live". If live
-  data is unavailable for any reason, the page stays on the snapshot with an
-  honest "snapshot · <timestamp>" chip.
+  markers in the `<script type="application/json" id="snapshot">` block, with
+  an honest "snapshot · <timestamp>" freshness chip. The hourly Routine keeps
+  that snapshot at most ~1 hour stale. (An earlier version also declared an
+  `mcp` connector capability for live in-page refresh, but "Claude Code
+  Remote" is not a claude.ai connector, so live mode could never activate —
+  it only produced a needless "This artifact uses connectors" consent dialog
+  and was removed.)
 - `generate.mjs` injects a fresh snapshot into the template
   (`node generate.mjs snapshot.json --out index.html`). It exits non-zero on
   any problem so automation never publishes a broken page.

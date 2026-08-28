@@ -45,7 +45,9 @@ session's existing context, silently unless something is broken):
    dashboard artifact
    https://claude.ai/code/artifact/82f09032-2515-47da-81db-73c50cbcca84
    (same file path republish, or pass url if the file path changed), favicon
-   "📡", keeping the stored capabilities (omit the capabilities parameter).
+   "📡". Omit the capabilities parameter — the page declares no
+   capabilities (the dead mcp connector declaration was removed to kill the
+   "This artifact uses connectors" consent dialog).
 5. Do not commit, push, message the user, or create anything else. End the
    turn quietly when the publish succeeds.
 ```

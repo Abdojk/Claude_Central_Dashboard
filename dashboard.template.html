@@ -91,7 +91,6 @@
     display: inline-flex; align-items: center; gap: 7px;
   }
   .freshness .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-faint); flex: none; }
-  .freshness.live .dot { background: var(--work); }
   .kpis {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 12px; margin: 18px 0 6px;
@@ -301,8 +300,6 @@
 (function () {
   "use strict";
 
-  var SERVER = "Claude Code Remote";
-  var TOOL = "list_sessions";
   var DONE_WINDOW_MS = 30 * 24 * 3600 * 1000;
   var GROUPS = ["needs_input", "working", "review_ready", "done"];
 
@@ -325,15 +322,6 @@
     if (payload.ccr && Array.isArray(payload.ccr.data)) return payload.ccr.data;
     if (Array.isArray(payload.data)) return payload.data;
     return [];
-  }
-
-  function pageInfo(payload) {
-    if (typeof payload === "string") {
-      try { payload = JSON.parse(payload); } catch (e) { return {}; }
-    }
-    var env = payload && payload.ccr ? payload.ccr : payload;
-    if (!env || typeof env !== "object" || Array.isArray(env)) return {};
-    return { hasMore: !!env.has_more, lastId: env.last_id };
   }
 
   function has(x, suffix) { return typeof x === "string" && x.indexOf(suffix, x.length - suffix.length) !== -1; }
@@ -468,7 +456,7 @@
 
   var showArchived = false;
   var lastSessions = [];
-  var freshness = { mode: "snapshot", ts: 0 };
+  var freshness = { ts: 0 };
 
   function render() {
     var byGroup = { needs_input: [], working: [], review_ready: [], done: [] };
@@ -523,12 +511,8 @@
       r === 0 ? "nothing pending" : unreadReview ? unreadReview + " unread" : "in the last 30 days";
     renderSpark();
 
-    var f = document.getElementById("freshness");
-    f.classList.toggle("live", freshness.mode === "live");
     document.getElementById("freshness-text").textContent =
-      freshness.mode === "live"
-        ? "live · updated " + relTime(freshness.ts)
-        : "snapshot · " + (freshness.ts ? new Date(freshness.ts).toLocaleString() : "unknown");
+      "snapshot · " + (freshness.ts ? new Date(freshness.ts).toLocaleString() : "unknown");
   }
 
   function renderSpark() {
@@ -556,11 +540,11 @@
     render();
   });
 
-  function setData(rawSessions, mode, ts) {
+  function setData(rawSessions, ts) {
     var byId = new Map();
     rawSessions.forEach(function (raw) { if (raw && raw.id) byId.set(raw.id, raw); });
     lastSessions = Array.from(byId.values()).map(normalizeSession);
-    freshness = { mode: mode, ts: ts };
+    freshness = { ts: ts };
     render();
   }
 
@@ -592,111 +576,10 @@
         sessions: extractSessions(parsed.sessions)
       };
     } catch (e) { /* keep empty snapshot */ }
-    setData(snapshotData.sessions, "snapshot", snapshotData.generatedAt);
+    setData(snapshotData.sessions, snapshotData.generatedAt);
   })();
 
   setInterval(render, 60000); // keep relative timestamps honest
-
-  // ---------- live mode ----------
-
-  var SETTINGS_FIX = " in claude.ai Settings → Connectors to see live data. Showing the last snapshot.";
-
-  function fallbackToSnapshot() {
-    setData(snapshotData.sessions, "snapshot", snapshotData.generatedAt);
-  }
-
-  function startLive(mcp) {
-    var epoch = 0;
-
-    function handleError(err) {
-      var code = err && err.code;
-      switch (code) {
-        case "server_unavailable":
-        case "rate_limited":
-          setNotice("live", "Live connection hiccup — retrying automatically.");
-          return; // keep last-good data; watchTool refreshes on its own
-        case "needs_reauth":
-          fallbackToSnapshot();
-          setNotice("live", "Reconnect “" + SERVER + "”" + SETTINGS_FIX);
-          return;
-        case "server_not_connected":
-        case "selection_required":
-        case "server_not_found":
-          fallbackToSnapshot();
-          setNotice("live", "Add “" + SERVER + "”" + SETTINGS_FIX);
-          return;
-        case "blocked_by_policy":
-        case "approval_required":
-          fallbackToSnapshot();
-          setNotice("live", "Live data is blocked by org policy. Showing the last snapshot.");
-          return;
-        case "tool_error":
-          setNotice("live", "Live refresh failed: " + (err.message || "tool error") + ". Showing last data.");
-          return;
-        case "not_granted":
-        case "capability_disabled":
-        case "capability_removed":
-        case "bad_request":
-          return; // no live updates will ever arrive; snapshot mode is already rendered
-        default:
-          setNotice("live", "Live refresh problem. Showing last data.");
-      }
-    }
-
-    function deliver(result, myEpoch) {
-      var payload = result.payload;
-      var sessions = extractSessions(payload);
-      var info = pageInfo(payload);
-      var storedAt = result.cache && result.cache.storedAt ? result.cache.storedAt : Date.now();
-
-      var followups = [];
-      // Deeper pages (up to 2 more).
-      var chain = Promise.resolve();
-      var lastId = info.lastId, more = info.hasMore, pages = 0;
-      function fetchNext() {
-        if (!more || !lastId || pages >= 2) return Promise.resolve();
-        pages++;
-        return mcp.callTool(SERVER, TOOL, { limit: 100, mine: true, after_id: lastId },
-          { cache: { staleTime: 30000 } })
-          .then(function (res) {
-            var extra = extractSessions(res.payload);
-            var pinfo = pageInfo(res.payload);
-            followups = followups.concat(extra);
-            lastId = pinfo.lastId; more = pinfo.hasMore;
-            return fetchNext();
-          })
-          .catch(function () { /* deeper pages are best-effort */ });
-      }
-      // Best-effort Cowork tag query (server-side filter may be unsupported).
-      var coworkFetch = mcp.callTool(SERVER, TOOL,
-        { limit: 100, mine: true, tags: ["cowork-local", "cowork-remote"] },
-        { cache: { staleTime: 30000 } })
-        .then(function (res) { followups = followups.concat(extractSessions(res.payload)); })
-        .catch(function () {
-          setNotice("cowork", null);
-        });
-
-      Promise.all([fetchNext(), coworkFetch]).then(function () {
-        if (myEpoch !== epoch) return; // a newer refresh already rendered
-        setNotice("live", null);
-        setData(sessions.concat(followups), "live", storedAt);
-      });
-    }
-
-    var unsub = null;
-    unsub = mcp.watchTool(SERVER, TOOL, { limit: 100, mine: true }, function (ev) {
-      if (ev.type === "error") { handleError(ev.error); return; }
-      epoch++;
-      deliver(ev.result, epoch);
-    }, { refetchInterval: 60000, cache: { staleTime: 30000, gcTime: 300000 } });
-  }
-
-  if (window.claude && typeof window.claude.use === "function") {
-    window.claude.use("mcp").then(function (mcp) {
-      if (mcp) startLive(mcp);
-      // null → stay in snapshot mode silently; the hourly refresh keeps it current.
-    });
-  }
 
   // ---------- self test (?selftest=1) ----------
 
